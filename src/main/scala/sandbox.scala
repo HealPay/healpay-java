@@ -11,7 +11,7 @@ object Sandbox {
     val service_key = args(0)
     val pin = args(1)
     val service = new SoapGateway(url, service_key, pin)
-    val response = service.search_customers
+    val response = service.search_customers(List(("Enabled", "eq", "true")), true)
     println(response)
   }
 }

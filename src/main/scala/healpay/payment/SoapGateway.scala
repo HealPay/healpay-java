@@ -20,7 +20,25 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     (new HexBinaryAdapter).marshal(digest)
   }
 
-  private def generate_security_token:scala.xml.Elem = {
+  private def send_request(envelope:scala.xml.Elem):String = {
+    val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
+    println(request)
+    Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
+  }
+
+  private def envelope(body:scala.xml.Elem):scala.xml.Elem = {
+    <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns1="urn:healpay" xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" 
+    SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <SOAP-ENV:Body>
+        {body}
+      </SOAP-ENV:Body>
+    </SOAP-ENV:Envelope>
+  }
+
+  private def security_token:scala.xml.Elem = {
     val seed = generate_seed
     val hash_value = generate_hash_pin(seed)
 
@@ -34,41 +52,32 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </Token>
   }
 
-  private def generate_search_param(search_field:String, search_type:String, search_value:String):scala.xml.Elem = {
-    <SearchParam xsi:type="ns1:SearchParam">
-      <Field xsi:type="xsd:string">{search_field}</Field>
-      <Type xsi:type="xsd:string">{search_type}</Type>
-      <Value xsi:type="xsd:string">{search_value}</Value>
-    </SearchParam>
+  private def search_params(params: List[(String, String, String)]):scala.xml.Elem = {
+    <Search xsi:type="ns1:SearchParamArray">
+    {
+      params.map( param_tuple => {
+        val (search_field, search_type, search_value) = param_tuple
+        <SearchParam xsi:type="ns1:SearchParam">
+          <Field xsi:type="xsd:string">{search_field}</Field>
+          <Type xsi:type="xsd:string">{search_type}</Type>
+          <Value xsi:type="xsd:string">{search_value}</Value>
+        </SearchParam>
+      })
+    }
+    </Search>
   }
 
-  private def generate_envelope(body:scala.xml.Elem):scala.xml.Elem = {
-    <SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:ns1="urn:healpay" xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-    xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" 
-    SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-      <SOAP-ENV:Body>
-        {body}
-      </SOAP-ENV:Body>
-    </SOAP-ENV:Envelope>
-  }
-
-  private def generate_request(envelope:scala.xml.Elem):String = {
-    val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
-
-    Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
-  }
-
-  // TODO: Handle arguments
-  def search_customers:String = {
-    generate_request(
-      generate_envelope(
+  def search_customers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):String = {
+    send_request(
+      envelope(
         <ns1:searchCustomers>
-          {generate_security_token}
-          <Search xsi:type="ns1:SearchParamArray">
-            {generate_search_param("Enabled", "eq", "true")}
-          </Search>
+          {security_token}
+          {search_params(params)}
+          { if (match_all) <MatchAll xsi:type="xsd:boolean">{match_all}</MatchAll> }
+          <Start xsi:type="xsd:integer">{start}</Start>
+          { if (limit > -1) <Limit xsi:type="xsd:integer">{limit}</Limit> }
+          { if (sort.length > 0) <Sort xsi:type="xsd:string">{sort}</Sort> }
+          
         </ns1:searchCustomers>
       )
     )
