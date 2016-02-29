@@ -8,6 +8,7 @@ import scalaj.http._
 // TODO: Currently this is just the most bare implementation.
 // TODO: Handle server errors
 // TODO: Return something better than xml
+// TODO: Transaction methods > customers > batch > card batches
 class SoapGateway(url:String, source_key:String, pin:String) {
   private def generate_seed:String = System.nanoTime.toString
 
