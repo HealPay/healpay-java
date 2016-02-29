@@ -42,25 +42,25 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     val seed = generate_seed
     val hash_value = generate_hash_pin(seed)
 
-    <Token xsi:type="ns1:ueSecurityToken">
-      <PinHash xsi:type="ns1:ueHash">
-        <HashValue xsi:type="xsd:string">{hash_value}</HashValue>
-        <Seed xsi:type="xsd:string">{seed}</Seed>
-        <Type xsi:type="xsd:string">sha1</Type>
+    <Token>
+      <PinHash>
+        <HashValue>{hash_value}</HashValue>
+        <Seed>{seed}</Seed>
+        <Type>sha1</Type>
       </PinHash>
-      <SourceKey xsi:type="xsd:string">{source_key}</SourceKey>
+      <SourceKey>{source_key}</SourceKey>
     </Token>
   }
 
   private def search_params(params: List[(String, String, String)]):scala.xml.Elem = {
-    <Search xsi:type="ns1:SearchParamArray">
+    <Search>
     {
       params.map( param_tuple => {
         val (search_field, search_type, search_value) = param_tuple
-        <SearchParam xsi:type="ns1:SearchParam">
-          <Field xsi:type="xsd:string">{search_field}</Field>
-          <Type xsi:type="xsd:string">{search_type}</Type>
-          <Value xsi:type="xsd:string">{search_value}</Value>
+        <SearchParam>
+          <Field>{search_field}</Field>
+          <Type>{search_type}</Type>
+          <Value>{search_value}</Value>
         </SearchParam>
       })
     }
@@ -73,10 +73,10 @@ class SoapGateway(url:String, source_key:String, pin:String) {
         <ns1:searchCustomers>
           {security_token}
           {search_params(params)}
-          { if (match_all) <MatchAll xsi:type="xsd:boolean">{match_all}</MatchAll> }
-          <Start xsi:type="xsd:integer">{start}</Start>
-          { if (limit > -1) <Limit xsi:type="xsd:integer">{limit}</Limit> }
-          { if (sort.length > 0) <Sort xsi:type="xsd:string">{sort}</Sort> }
+          { if (match_all) <MatchAll>{match_all}</MatchAll> }
+          <Start>{start}</Start>
+          { if (limit > -1) <Limit>{limit}</Limit> }
+          { if (sort.length > 0) <Sort>{sort}</Sort> }
           
         </ns1:searchCustomers>
       )
