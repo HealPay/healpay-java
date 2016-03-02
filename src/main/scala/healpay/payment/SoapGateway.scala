@@ -5,6 +5,8 @@ import javax.xml.bind.annotation.adapters.HexBinaryAdapter
 
 import scalaj.http._
 
+import healpay.payment._
+
 // TODO: Currently this is just the most bare implementation.
 // TODO: Handle server errors
 // TODO: Return something better than xml
@@ -20,10 +22,12 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     (new HexBinaryAdapter).marshal(digest)
   }
 
-  private def send_request(envelope:scala.xml.Elem):String = {
+  private def send_request(envelope:scala.xml.Elem):scala.xml.Elem = {
     val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
-    println(request)
-    Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
+    val pp = new scala.xml.PrettyPrinter(80,2)
+    println(pp.format(envelope))
+    val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
+    scala.xml.XML.loadString(result)
   }
 
   private def envelope(body:scala.xml.Elem):scala.xml.Elem = {
@@ -68,7 +72,7 @@ class SoapGateway(url:String, source_key:String, pin:String) {
   }
 
   def search_customers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):String = {
-    send_request(
+    val result = send_request(
       envelope(
         <ns1:searchCustomers>
           {security_token}
@@ -77,9 +81,10 @@ class SoapGateway(url:String, source_key:String, pin:String) {
           <Start>{start}</Start>
           { if (limit > -1) <Limit>{limit}</Limit> }
           { if (sort.length > 0) <Sort>{sort}</Sort> }
-          
         </ns1:searchCustomers>
       )
     )
+    BillingAddress.fromXml((result \ "BillingAddress")(0))
+    result.toString()
   }
 }
