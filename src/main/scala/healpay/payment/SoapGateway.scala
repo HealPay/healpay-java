@@ -24,11 +24,16 @@ class SoapGateway(url:String, source_key:String, pin:String) {
 
   private def sendRequest(name:String, body:scala.xml.Elem):scala.xml.Node = {
     import scala.xml.{Elem, Text, Null, TopScope}
-    val request_node = envelope(Elem("ns1", name, Null, TopScope, Text("")).copy(child = securityToken ++ body.child))
 
-    val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + request_node
-    val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
-    var result_node = scala.xml.XML.loadString(result)
+    val request_node = envelope(Elem("ns1", name, Null, TopScope, Text(""))
+      .copy(child = securityToken ++ body.child))
+
+    val result = Http(url)
+      .postData(request_node.toString)
+      .header("Content-type", "text/xml; charset=utf-8")
+      .asString.body
+
+    val result_node = scala.xml.XML.loadString(result)
 
     if (( result_node \\ "Fault" ).length > 0) {
       throw new ServerFaultException(( result_node \\ "faultstring" ).text)
@@ -78,7 +83,12 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </Search>
   }
 
-  def searchCustomers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):CustomerSearchResult = {
+  def searchCustomers(params: List[(String, String, String)], 
+                      match_all:Boolean = false, 
+                      start:Integer = 0, 
+                      limit:Integer = -1,
+                      sort:String = ""):CustomerSearchResult = {
+
     val response = sendRequest("searchCustomers", 
       <body>
         {searchParams(params)}
@@ -89,8 +99,8 @@ class SoapGateway(url:String, source_key:String, pin:String) {
       </body>)
 
     val result = response \\ "searchCustomersReturn"
-    if (result.length < 1) {
-      throw new UnexpectedServerResponseException("Got something other than a customer search response")
+    if (result.length != 1) {
+      throw new UnexpectedServerResponseException("Got something other than a single customer search response")
     }
 
     CustomerSearchResult.fromXml(result.head)
