@@ -14,8 +14,8 @@ object Sandbox {
     val service_key = args(0)
     val pin = args(1)
     val service = new SoapGateway(url, service_key, pin)
-    //val response = service.search_customers(List(("BillingAddress.lastname", "eq", "ASearchWithNoValidResults")), true)
-    val response = Try(service.search_customers(List(("Enabled", "eq", "true")), true))
+    //val response = service.searchCustomers(List(("BillingAddress.lastname", "eq", "ASearchWithNoValidResults")), true)
+    val response = Try(service.searchCustomers(List(("Enabled", "eq", "true")), true))
 
     response match {
       case Success(result) => println(result)

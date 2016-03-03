@@ -12,9 +12,9 @@ import healpay.payment._
 // TODO: Return something better than xml
 // TODO: Transaction methods > customers > batch > card batches
 class SoapGateway(url:String, source_key:String, pin:String) {
-  private def generate_seed:String = System.nanoTime.toString
+  private def generateSeed:String = System.nanoTime.toString
 
-  private def generate_hash_pin(seed:String):String = {
+  private def generateHashPin(seed:String):String = {
     val sha = MessageDigest.getInstance("SHA-1")
     val pre_hash = source_key + seed + pin
     val digest = sha.digest(pre_hash.getBytes("UTF-8"))
@@ -22,7 +22,7 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     (new HexBinaryAdapter).marshal(digest)
   }
 
-  private def send_request(envelope:scala.xml.Elem):scala.xml.Node = {
+  private def sendRequest(envelope:scala.xml.Elem):scala.xml.Node = {
     val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
     val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
     scala.xml.XML.loadString(result)
@@ -40,9 +40,9 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </SOAP-ENV:Envelope>
   }
 
-  private def security_token:scala.xml.Elem = {
-    val seed = generate_seed
-    val hash_value = generate_hash_pin(seed)
+  private def securityToken:scala.xml.Elem = {
+    val seed = generateSeed
+    val hash_value = generateHashPin(seed)
 
     <Token>
       <PinHash>
@@ -54,7 +54,7 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </Token>
   }
 
-  private def search_params(params: List[(String, String, String)]):scala.xml.Elem = {
+  private def searchParams(params: List[(String, String, String)]):scala.xml.Elem = {
     <Search>
     {
       params.map( param_tuple => {
@@ -69,12 +69,12 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </Search>
   }
 
-  def search_customers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):CustomerSearchResult = {
-    val response = send_request(
+  def searchCustomers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):CustomerSearchResult = {
+    val response = sendRequest(
       envelope(
         <ns1:searchCustomers>
-          {security_token}
-          {search_params(params)}
+          {securityToken}
+          {searchParams(params)}
           { if (match_all) <MatchAll>{match_all}</MatchAll> }
           <Start>{start}</Start>
           { if (limit > -1) <Limit>{limit}</Limit> }
