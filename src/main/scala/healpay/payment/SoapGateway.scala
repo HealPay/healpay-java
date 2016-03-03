@@ -22,16 +22,19 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     (new HexBinaryAdapter).marshal(digest)
   }
 
-  private def sendRequest(envelope:scala.xml.Elem):scala.xml.Node = {
-    val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
-    val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
-    var node = scala.xml.XML.loadString(result)
+  private def sendRequest(name:String, body:scala.xml.Elem):scala.xml.Node = {
+    import scala.xml.{Elem, Text, Null, TopScope}
+    val request_node = envelope(Elem("ns1", name, Null, TopScope, Text("")).copy(child = securityToken ++ body.child))
 
-    if (( node \\ "Fault" ).length > 0) {
-      throw new ServerFaultException(( node \\ "faultstring" ).text)
+    val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + request_node
+    val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
+    var result_node = scala.xml.XML.loadString(result)
+
+    if (( result_node \\ "Fault" ).length > 0) {
+      throw new ServerFaultException(( result_node \\ "faultstring" ).text)
     }
 
-    node
+    result_node
   }
 
   private def envelope(body:scala.xml.Elem):scala.xml.Elem = {
@@ -76,18 +79,14 @@ class SoapGateway(url:String, source_key:String, pin:String) {
   }
 
   def searchCustomers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):CustomerSearchResult = {
-    val response = sendRequest(
-      envelope(
-        <ns1:searchCustomers>
-          {securityToken}
-          {searchParams(params)}
-          { if (match_all) <MatchAll>{match_all}</MatchAll> }
-          <Start>{start}</Start>
-          { if (limit > -1) <Limit>{limit}</Limit> }
-          { if (sort.length > 0) <Sort>{sort}</Sort> }
-        </ns1:searchCustomers>
-      )
-    )
+    val response = sendRequest("searchCustomers", 
+      <body>
+        {searchParams(params)}
+        { if (match_all) <MatchAll>{match_all}</MatchAll> }
+        <Start>{start}</Start>
+        { if (limit > -1) <Limit>{limit}</Limit> }
+        { if (sort.length > 0) <Sort>{sort}</Sort> }
+      </body>)
 
     val result = response \\ "searchCustomersReturn"
     if (result.length < 1) {
