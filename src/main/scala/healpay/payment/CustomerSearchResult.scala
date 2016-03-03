@@ -13,8 +13,10 @@ case class CustomerSearchResult(
 object CustomerSearchResult {
   def fromXml(node: scala.xml.Node):CustomerSearchResult = {
     var customers = ListBuffer.empty[Customer]
+    //val pp = new scala.xml.PrettyPrinter(80,2)
 
-    for (customer <- ( node \ "Customers" )) {
+    //println(pp.format(node))
+    for (customer <- ( node \ "Customers" \ "item" )) {
       customers += Customer.fromXml(customer)
     }
 

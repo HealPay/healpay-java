@@ -22,6 +22,7 @@ object Customer {
   def fromXml(node:scala.xml.Node):Customer = {
     var payment_methods = ListBuffer.empty[PaymentMethod]
     var custom_fields = ListBuffer.empty[FieldValue]
+    //val pp = new scala.xml.PrettyPrinter(80,2)
 
     for (payment_method <- ( node \ "PaymentMethods" \ "item" )) {
       payment_methods += ( PaymentMethod.fromXml(payment_method) )
@@ -36,7 +37,7 @@ object Customer {
       id = ( node \ "CustomerID" ).text,
       notes = ( node \ "Notes" ).text,
       url = ( node \ "URL" ).text,
-      created = DateTime.parse(( node \ "Created)" ).text),
+      created = DateTime.parse(( node \ "Created" ).text),
       modified = DateTime.parse(( node \ "Modified" ).text),
 
       custom_data = ( node \ "CustomData" ).text,

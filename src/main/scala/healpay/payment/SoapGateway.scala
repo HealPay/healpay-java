@@ -22,10 +22,8 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     (new HexBinaryAdapter).marshal(digest)
   }
 
-  private def send_request(envelope:scala.xml.Elem):scala.xml.Elem = {
+  private def send_request(envelope:scala.xml.Elem):scala.xml.Node = {
     val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
-    val pp = new scala.xml.PrettyPrinter(80,2)
-    println(pp.format(envelope))
     val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
     scala.xml.XML.loadString(result)
   }
@@ -71,8 +69,8 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     </Search>
   }
 
-  def search_customers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):String = {
-    val result = send_request(
+  def search_customers(params: List[(String, String, String)], match_all:Boolean = false, start:Integer = 0, limit:Integer = -1, sort:String = ""):CustomerSearchResult = {
+    val response = send_request(
       envelope(
         <ns1:searchCustomers>
           {security_token}
@@ -84,7 +82,16 @@ class SoapGateway(url:String, source_key:String, pin:String) {
         </ns1:searchCustomers>
       )
     )
-    BillingAddress.fromXml((result \ "BillingAddress")(0))
-    result.toString()
+
+    if (( response \\ "Fault" ).length > 0) {
+      throw new ServerFaultException(( response \\ "faultstring" ).text)
+    }
+
+    val result = response \\ "searchCustomersReturn"
+    if (result.length < 1) {
+      throw new UnexpectedServerResponseException("Got something other than a customer search response")
+    }
+
+    CustomerSearchResult.fromXml(result.head)
   }
 }
