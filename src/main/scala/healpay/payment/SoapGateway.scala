@@ -25,7 +25,13 @@ class SoapGateway(url:String, source_key:String, pin:String) {
   private def sendRequest(envelope:scala.xml.Elem):scala.xml.Node = {
     val request = s"""<?xml version="1.0" encoding="utf-8"?>""" + envelope
     val result = Http(url).postData(request).header("Content-type", "text/xml; charset=utf-8").asString.body
-    scala.xml.XML.loadString(result)
+    var node = scala.xml.XML.loadString(result)
+
+    if (( node \\ "Fault" ).length > 0) {
+      throw new ServerFaultException(( node \\ "faultstring" ).text)
+    }
+
+    node
   }
 
   private def envelope(body:scala.xml.Elem):scala.xml.Elem = {
@@ -82,10 +88,6 @@ class SoapGateway(url:String, source_key:String, pin:String) {
         </ns1:searchCustomers>
       )
     )
-
-    if (( response \\ "Fault" ).length > 0) {
-      throw new ServerFaultException(( response \\ "faultstring" ).text)
-    }
 
     val result = response \\ "searchCustomersReturn"
     if (result.length < 1) {
