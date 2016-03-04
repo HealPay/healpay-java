@@ -10,7 +10,7 @@ Please install both [Scala](http://scala-lang.org) and [sbt](http://scalaxb.org)
 
 
 ## Using the API
-Do note that the API is currently 'in development' may not yet be usable. To see an example of how to use the API, please see `src/main/scala/sandbox.scala`
+Do note that the API is currently 'in development' may not yet be usable. The current API is defined in `src/main/scala/healpay/SoapGateway.scala`. To see an example of the API in use, see `src/main/scala/sandbox.scala`
 
 ## Extending the API
 Please see the searchCustomers method in `src/main/scala/healpay/SoapGateway.scala` for an example of how to implement an API call.
