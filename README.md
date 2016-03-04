@@ -2,13 +2,15 @@
 
 This API is implemented in Scala and is bound to the gateway's SOAP API.
 
+The API is split into two components. Data objects returned by the API, and the methods for performing requests to the gateway.
+
 ## Pre-requisites 
 
 Please install both [Scala](http://scala-lang.org) and [sbt](http://scalaxb.org)
 
 
 ## Using and extending the API
-Do note that the API is currently in a 'in development' state and is currently unfinished. To see an example of how to use the API, please see `src/main/scala/sandbox.scala`
+Do note that the API is currently 'in development' may not yet be usable. To see an example of how to use the API, please see `src/main/scala/sandbox.scala`
 
 To run the sandbox, use: `sbt "run https://sandbox.healpay.com/soap/gate/SOAPID SOURCE_KEY PIN"`
 

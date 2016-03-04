@@ -7,11 +7,7 @@ import scalaj.http._
 
 import healpay.payment._
 
-// TODO: Currently this is just the most bare implementation.
-// TODO: Handle server errors
-// TODO: Return something better than xml
-// TODO: Transaction methods > customers > batch > card batches
-class SoapGateway(url:String, source_key:String, pin:String) {
+class SoapFactory(source_key:String, pin:String) {
   private def generateSeed:String = System.nanoTime.toString
 
   private def generateHashPin(seed:String):String = {
@@ -20,26 +16,6 @@ class SoapGateway(url:String, source_key:String, pin:String) {
     val digest = sha.digest(pre_hash.getBytes("UTF-8"))
 
     (new HexBinaryAdapter).marshal(digest)
-  }
-
-  private def sendRequest(name:String, body:scala.xml.Elem):scala.xml.Node = {
-    import scala.xml.{Elem, Text, Null, TopScope}
-
-    val request_node = envelope(Elem("ns1", name, Null, TopScope, Text(""))
-      .copy(child = securityToken ++ body.child))
-
-    val result = Http(url)
-      .postData(request_node.toString)
-      .header("Content-type", "text/xml; charset=utf-8")
-      .asString.body
-
-    val result_node = scala.xml.XML.loadString(result)
-
-    if (( result_node \\ "Fault" ).length > 0) {
-      throw new ServerFaultException(( result_node \\ "faultstring" ).text)
-    }
-
-    result_node
   }
 
   private def envelope(body:scala.xml.Elem):scala.xml.Elem = {
@@ -87,17 +63,49 @@ class SoapGateway(url:String, source_key:String, pin:String) {
                       match_all:Boolean = false, 
                       start:Integer = 0, 
                       limit:Integer = -1,
+                      sort:String = ""):scala.xml.Elem = {
+
+    envelope(<ns1:searchCustomers>
+      {securityToken}
+      {searchParams(params)}
+      { if (match_all) <MatchAll>{match_all}</MatchAll> }
+      <Start>{start}</Start>
+      { if (limit > -1) <Limit>{limit}</Limit> }
+      { if (sort.length > 0) <Sort>{sort}</Sort> }
+    </ns1:searchCustomers>)
+  }
+}
+
+// TODO: Transaction methods > customers > batch > card batches
+class SoapGateway(url:String, source_key:String, pin:String) {
+  val soap_factory = new SoapFactory(source_key, pin)
+
+  private def sendRequest(request:scala.xml.Elem):scala.xml.Node = {
+    val pp = new scala.xml.PrettyPrinter(80,2)
+
+    val result = Http(url)
+      .postData(request.toString)
+      .header("Content-type", "text/xml; charset=utf-8")
+      .asString.body
+
+    val result_node = scala.xml.XML.loadString(result)
+
+    if (( result_node \\ "Fault" ).length > 0) {
+      throw new ServerFaultException(( result_node \\ "faultstring" ).text)
+    }
+
+    result_node
+  }
+
+
+  def searchCustomers(params: List[(String, String, String)], 
+                      match_all:Boolean = false, 
+                      start:Integer = 0, 
+                      limit:Integer = -1,
                       sort:String = ""):CustomerSearchResult = {
 
-    val response = sendRequest("searchCustomers", 
-      <body>
-        {searchParams(params)}
-        { if (match_all) <MatchAll>{match_all}</MatchAll> }
-        <Start>{start}</Start>
-        { if (limit > -1) <Limit>{limit}</Limit> }
-        { if (sort.length > 0) <Sort>{sort}</Sort> }
-      </body>)
-
+    val request = soap_factory.searchCustomers(params, match_all, start, limit, sort)
+    val response = sendRequest(request)
     val result = response \\ "searchCustomersReturn"
     if (result.length != 1) {
       throw new UnexpectedServerResponseException("Got something other than a single customer search response")
